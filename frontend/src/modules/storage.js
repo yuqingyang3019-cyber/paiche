@@ -6,6 +6,11 @@ function todayKey() {
   return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
 }
 
+export function todayLabel() {
+  const now = new Date();
+  return `${now.getMonth() + 1}月${now.getDate()}日`;
+}
+
 export function todayFilename() {
   const now = new Date();
   return `乌达君正${now.getMonth() + 1}.${now.getDate()}.xlsx`;

@@ -8,8 +8,7 @@ from typing import Any
 from .config import get_settings
 
 
-def today_cn() -> date:
-    return date.today()
+from dispatch.fill import date_label_cn, today_cn
 
 
 def _session_path(userid: str, day: date | None = None) -> Path:
@@ -51,9 +50,10 @@ def clear_vehicles(userid: str) -> None:
 
 
 def format_vehicle_summary(vehicles: list[dict[str, Any]]) -> str:
+    label = date_label_cn()
     if not vehicles:
-        return "今日列表为空。"
-    lines = [f"今日共 {len(vehicles)} 辆："]
+        return f"{label}列表为空。"
+    lines = [f"{label}共 {len(vehicles)} 辆："]
     for index, vehicle in enumerate(vehicles, start=1):
         plate = vehicle.get("plate", "?")
         name = vehicle.get("name", "?")

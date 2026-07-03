@@ -32,6 +32,11 @@ def today_cn() -> date:
     return datetime.now(ZoneInfo("Asia/Shanghai")).date()
 
 
+def date_label_cn(day: date | None = None) -> str:
+    current = day or today_cn()
+    return f"{current.month}月{current.day}日"
+
+
 def output_filename(day: date | None = None) -> str:
     current = day or today_cn()
     return f"乌达君正{current.month}.{current.day}.xlsx"

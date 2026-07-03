@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from dispatch.fill import fill_dispatch_workbook
+from dispatch.fill import date_label_cn, fill_dispatch_workbook
 from dispatch.parse import parse_dispatch_text
 from wechatpy.enterprise import parse_message
 
@@ -15,27 +15,31 @@ LIST_KEYWORDS = {"列表", "今日列表", "查看列表"}
 CLEAR_KEYWORDS = {"清空", "清除", "重置"}
 HELP_KEYWORDS = {"帮助", "help", "?", "？"}
 
-OPERATION_GUIDE = """【乌达派车助手 · 操作指南】
+
+def build_operation_guide() -> str:
+    label = date_label_cn()
+    return f"""【乌达派车助手 · 操作指南】
 
 添加车辆
 从个人微信长按车信息，转发到本应用（需逐条转发，不可合并）
 
 常用指令
-列表 — 查看今日已收录车辆
-生成 — 导出今日 Excel 文件
-清空 — 清除今日列表后重新录入
+列表 — 查看{label}已收录车辆
+生成 — 导出{label} Excel 文件
+清空 — 清除{label}列表后重新录入
 帮助 — 再次查看本说明"""
 
 
 def operation_guide(userid: str | None = None, note: str | None = None) -> str:
+    label = date_label_cn()
     parts: list[str] = []
     if note:
         parts.append(note)
     if userid:
         count = len(load_vehicles(userid))
         if count:
-            parts.append(f"今日已收录 {count} 辆，发送「生成」可导出 Excel。")
-    parts.append(OPERATION_GUIDE)
+            parts.append(f"{label}已收录 {count} 辆，发送「生成」可导出 Excel。")
+    parts.append(build_operation_guide())
     return "\n\n".join(parts)
 
 
@@ -75,7 +79,7 @@ def handle_incoming_xml(xml: str, client: WeWorkClient) -> tuple[str | None, boo
 
     if command in {_normalize_command(k) for k in CLEAR_KEYWORDS}:
         clear_vehicles(userid)
-        return "已清空今日列表。\n\n" + OPERATION_GUIDE, False
+        return f"已清空{date_label_cn()}列表。\n\n" + build_operation_guide(), False
 
     if command in {_normalize_command(k) for k in GENERATE_KEYWORDS}:
         return _handle_generate(userid, client)
@@ -101,17 +105,18 @@ def _handle_vehicle_text(userid: str, content: str) -> tuple[str, bool]:
 
     all_vehicles = append_vehicles(userid, vehicles)
     added = "、".join(f"{v.get('plate', '?')}·{v.get('name', '?')}" for v in vehicles)
-    lines = [f"已添加 {len(vehicles)} 辆：{added}", f"今日共 {len(all_vehicles)} 辆。"]
+    label = date_label_cn()
+    lines = [f"已添加 {len(vehicles)} 辆：{added}", f"{label}共 {len(all_vehicles)} 辆。"]
     if warnings:
         lines.append("提示：" + "；".join(warnings))
-    lines.append('凑齐后发送「生成」获取今日 Excel。')
+    lines.append(f"凑齐后发送「生成」获取{label} Excel。")
     return "\n".join(lines), False
 
 
 def _handle_generate(userid: str, client: WeWorkClient) -> tuple[str, bool]:
     vehicles = load_vehicles(userid)
     if not vehicles:
-        return operation_guide(userid, "今日列表为空，请先转发车信息。"), False
+        return operation_guide(userid, f"{date_label_cn()}列表为空，请先转发车信息。"), False
 
     try:
         content, filename = fill_dispatch_workbook(vehicles)

@@ -52,6 +52,12 @@ def test_output_filename() -> None:
     assert output_filename(date(2026, 12, 9)) == "乌达君正12.9.xlsx"
 
 
+def test_date_label_cn() -> None:
+    from dispatch.fill import date_label_cn
+
+    assert date_label_cn(date(2026, 7, 3)) == "7月3日"
+
+
 def test_fill_dispatch_workbook() -> None:
     content, filename = fill_dispatch_workbook([SAMPLE_VEHICLE], day=date(2026, 7, 2))
     assert filename == "乌达君正7.2.xlsx"

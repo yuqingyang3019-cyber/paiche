@@ -1,6 +1,6 @@
 import { createApp, computed, onUnmounted, ref } from "./assets/vue.esm-browser.js";
 import { generateDispatch, parseDispatchText } from "./modules/api.js";
-import { loadVehicles, saveVehicles, todayFilename } from "./modules/storage.js";
+import { loadVehicles, saveVehicles, todayFilename, todayLabel } from "./modules/storage.js";
 import { TABLE_COLUMNS, toTableRow } from "./modules/table.js";
 
 function useProgress() {
@@ -53,6 +53,7 @@ createApp({
 
     const hasVehicles = computed(() => vehicles.value.length > 0);
     const filename = computed(() => todayFilename());
+    const dateLabel = computed(() => todayLabel());
     const busy = computed(() => parsing.value || generating.value);
     const tableRows = computed(() => vehicles.value.map(toTableRow));
 
@@ -75,7 +76,7 @@ createApp({
     }
 
     function clearAll() {
-      if (!vehicles.value.length || !window.confirm("确定清空今日列表？")) {
+      if (!vehicles.value.length || !window.confirm(`确定清空${todayLabel()}列表？`)) {
         return;
       }
       vehicles.value = [];
@@ -164,6 +165,7 @@ createApp({
       toast,
       hasVehicles,
       filename,
+      dateLabel,
       tableRows,
       columns: TABLE_COLUMNS,
       addToList,
@@ -204,7 +206,7 @@ createApp({
 
       <div class="section-head">
         <h2>
-          今日列表
+          {{ dateLabel }}列表
           <span v-if="hasVehicles" class="count">（{{ vehicles.length }} 辆）</span>
         </h2>
         <button v-if="hasVehicles" class="btn btn-ghost" type="button" :disabled="busy" @click="clearAll">清空</button>
@@ -239,7 +241,7 @@ createApp({
         <p class="filename">文件名：{{ filename }}</p>
         <button class="btn btn-primary" :disabled="busy" @click="downloadExcel">
           <span v-if="generating" class="spinner"></span>
-          <span>{{ generating ? '正在生成…' : '生成今日 Excel' }}</span>
+          <span>{{ generating ? '正在生成…' : `生成${dateLabel} Excel` }}</span>
         </button>
       </div>
     </footer>
