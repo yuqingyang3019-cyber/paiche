@@ -7,6 +7,11 @@ frontend/dist/
 frontend/node_modules/
 .env.local
 
+# SQLite（FC 运行时生成，不入库）
+*.db
+*.db-wal
+*.db-shm
+
 # macOS
 .DS_Store
 **/.DS_Store

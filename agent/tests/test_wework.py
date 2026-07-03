@@ -43,13 +43,6 @@ def client() -> TestClient:
 
 
 @pytest.fixture
-def session_dir(tmp_path, monkeypatch):
-    monkeypatch.setenv("WEWORK_SESSION_DIR", str(tmp_path))
-    monkeypatch.setenv("LUCHE_SKIP_ENV_LOCAL", "1")
-    return tmp_path
-
-
-@pytest.fixture
 def mock_client():
     client = MagicMock()
     client.send_file = MagicMock()
@@ -165,7 +158,7 @@ def test_decrypt_post_body_roundtrip() -> None:
         agent_secret="secret",
         token="69Ku5OIg",
         encoding_aes_key="abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG",
-        session_dir="/tmp/wework-test",
+        db_path="/tmp/wework-test/paiche.db",
     )
     crypto = build_crypto(settings)
     inner_xml = SAMPLE_XML.format(content="列表")

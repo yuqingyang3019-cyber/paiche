@@ -11,7 +11,7 @@ class WeWorkSettings:
     agent_secret: str
     token: str
     encoding_aes_key: str
-    session_dir: str
+    db_path: str
 
     @property
     def callback_enabled(self) -> bool:
@@ -32,7 +32,7 @@ class WeWorkSettings:
             encoding_aes_key=os.getenv(
                 "WEWORK_ENCODING_AES_KEY", "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG"
             ).strip(),
-            session_dir=os.getenv("WEWORK_SESSION_DIR", "/tmp/wework_sessions").strip(),
+            db_path=os.getenv("WEWORK_DB_PATH", "/tmp/wework/paiche.db").strip(),
         )
 
 

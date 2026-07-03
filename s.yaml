@@ -40,5 +40,5 @@ resources:
         WEWORK_AGENT_SECRET: ${env("WEWORK_AGENT_SECRET", "")}
         WEWORK_TOKEN: 69Ku5OIg
         WEWORK_ENCODING_AES_KEY: abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG
-        WEWORK_SESSION_DIR: /tmp/wework_sessions
+        WEWORK_DB_PATH: /tmp/wework/paiche.db
         BASE_PATH: /paiche
