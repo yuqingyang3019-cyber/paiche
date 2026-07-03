@@ -1,0 +1,8 @@
+agent/static/
+agent/__pycache__/
+agent/**/__pycache__/
+.pytest_cache/
+.venv/
+frontend/dist/
+frontend/node_modules/
+.env.local

@@ -1,0 +1,49 @@
+edition: 3.0.0
+name: luche-paichedan
+access: default
+
+vars:
+  region: cn-hangzhou
+  function_name: luche-paichedan
+
+resources:
+  app:
+    component: fc3
+    props:
+      region: ${vars.region}
+      functionName: ${vars.function_name}
+      description: 乌达派车填表助手
+      runtime: custom.debian11
+      code: ./agent
+      customRuntimeConfig:
+        command:
+          - /bin/bash
+          - bootstrap.sh
+        port: 9000
+      cpu: 0.5
+      memorySize: 512
+      diskSize: 512
+      timeout: 60
+      instanceConcurrency: 10
+      internetAccess: true
+      environmentVariables:
+        PORT: "9000"
+        H5_STATIC_DIR: /code/static
+        PATH: /var/fc/lang/python3.12/bin:/usr/local/bin:/usr/bin:/bin
+        PYTHONPATH: /code
+        DASHSCOPE_API_KEY: ${env("DASHSCOPE_API_KEY", "")}
+        DASHSCOPE_BASE_URL: https://dashscope.aliyuncs.com/compatible-mode/v1
+        DASHSCOPE_MODEL: ${env("DASHSCOPE_MODEL", "glm-5")}
+        DASHSCOPE_TIMEOUT_SECONDS: ${env("DASHSCOPE_TIMEOUT_SECONDS", "60")}
+        WEWORK_CORP_ID: ${env("WEWORK_CORP_ID", "")}
+        WEWORK_AGENT_ID: ${env("WEWORK_AGENT_ID", "")}
+        WEWORK_AGENT_SECRET: ${env("WEWORK_AGENT_SECRET", "")}
+        WEWORK_TOKEN: ${env("WEWORK_TOKEN", "")}
+        WEWORK_ENCODING_AES_KEY: ${env("WEWORK_ENCODING_AES_KEY", "")}
+        WEWORK_SESSION_DIR: /tmp/wework_sessions
+      customDomain:
+        protocol: HTTPS
+        route:
+          path: "/*"
+          qualifier: LATEST
+        domainName: auto
