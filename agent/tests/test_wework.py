@@ -88,7 +88,30 @@ def test_handle_vehicle_text(session_dir, mock_client) -> None:
 def test_handle_help_command(session_dir, mock_client) -> None:
     xml = SAMPLE_XML.format(content="帮助")
     reply, _ = handle_incoming_xml(xml, mock_client)
-    assert "转发" in reply
+    assert "操作指南" in reply
+    assert "列表" in reply
+
+
+def test_handle_unknown_text_returns_guide(session_dir, mock_client) -> None:
+    xml = SAMPLE_XML.format(content="你好")
+    reply, _ = handle_incoming_xml(xml, mock_client)
+    assert "操作指南" in reply
+    assert "未能识别" in reply
+
+
+def test_handle_invalid_vehicle_returns_guide(session_dir, mock_client) -> None:
+    xml = SAMPLE_XML.format(content="车号：蒙L93723")
+    reply, _ = handle_incoming_xml(xml, mock_client)
+    assert "操作指南" in reply
+    assert load_vehicles("zhangsan") == []
+
+
+def test_handle_generate_empty_returns_guide(session_dir, mock_client) -> None:
+    xml = SAMPLE_XML.format(content="生成")
+    reply, active = handle_incoming_xml(xml, mock_client)
+    assert active is False
+    assert "操作指南" in reply
+    assert "列表为空" in reply
 
 
 def test_handle_list_command(session_dir, mock_client) -> None:
