@@ -31,6 +31,8 @@ def decrypt_message(
         return crypto.decrypt_message(body.decode("utf-8"), msg_signature, timestamp, nonce)
     except InvalidSignatureException as exc:
         raise ValueError("消息签名校验失败") from exc
+    except Exception as exc:
+        raise ValueError(f"消息解密失败：{exc}") from exc
 
 
 def encrypt_text_reply(

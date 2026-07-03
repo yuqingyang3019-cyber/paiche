@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, Response
 
@@ -7,6 +9,8 @@ from wework.callback import build_crypto, decrypt_message, encrypt_text_reply, v
 from wework.client import WeWorkClient
 from wework.config import get_settings
 from wework.handler import handle_incoming_xml
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/wework", tags=["wework"])
 
@@ -50,22 +54,32 @@ async def wework_callback(
 
     try:
         xml = decrypt_message(crypto, msg_signature, timestamp, nonce, body)
+        client = WeWorkClient(settings)
+        reply_text, _ = handle_incoming_xml(xml, client)
     except ValueError as exc:
+        logger.warning("wework callback rejected: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        logger.exception("wework callback failed")
+        # 企微要求尽快 200，避免反复重试打爆实例
+        return PlainTextResponse("success")
 
-    client = WeWorkClient(settings)
-    reply_text, _ = handle_incoming_xml(xml, client)
     if not reply_text:
         return PlainTextResponse("success")
 
-    message_xml = encrypt_text_reply(
-        crypto,
-        to_user=_extract_xml_field(xml, "FromUserName"),
-        from_user=_extract_xml_field(xml, "ToUserName"),
-        content=reply_text,
-        nonce=nonce,
-        timestamp=timestamp,
-    )
+    try:
+        message_xml = encrypt_text_reply(
+            crypto,
+            to_user=_extract_xml_field(xml, "FromUserName"),
+            from_user=_extract_xml_field(xml, "ToUserName"),
+            content=reply_text,
+            nonce=nonce,
+            timestamp=timestamp,
+        )
+    except Exception:
+        logger.exception("wework reply encrypt failed")
+        return PlainTextResponse("success")
+
     return Response(content=message_xml, media_type="application/xml")
 
 

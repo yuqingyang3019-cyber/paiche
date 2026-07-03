@@ -170,3 +170,41 @@ def test_decrypt_post_body_roundtrip() -> None:
 
     decrypted = decrypt_message(crypto, signature, timestamp, nonce, encrypted_xml.encode("utf-8"))
     assert "列表" in decrypted
+
+
+def test_wework_post_callback_roundtrip(client, monkeypatch) -> None:
+    from wechatpy.crypto import _get_signature
+
+    monkeypatch.setenv("WEWORK_CORP_ID", "wwtestcorp")
+    monkeypatch.setenv("WEWORK_AGENT_SECRET", "secret")
+    monkeypatch.setenv("WEWORK_AGENT_ID", "1")
+    monkeypatch.setenv("LUCHE_SKIP_ENV_LOCAL", "1")
+
+    settings = WeWorkSettings(
+        corp_id="wwtestcorp",
+        agent_id=1,
+        agent_secret="secret",
+        token="69Ku5OIg",
+        encoding_aes_key="abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG",
+        db_path="/tmp/wework-test-route/paiche.db",
+    )
+    crypto = build_crypto(settings)
+    inner_xml = SAMPLE_XML.format(content="帮助")
+    nonce = "nonce456"
+    timestamp = "1234567891"
+    encrypted_xml = crypto.encrypt_message(inner_xml, nonce, timestamp)
+    encrypt_text = encrypted_xml.split("<Encrypt><![CDATA[")[1].split("]]></Encrypt>")[0]
+    signature = _get_signature(settings.token, timestamp, nonce, encrypt_text)
+
+    response = client.post(
+        "/api/wework/callback",
+        content=encrypted_xml.encode("utf-8"),
+        params={
+            "msg_signature": signature,
+            "timestamp": timestamp,
+            "nonce": nonce,
+        },
+        headers={"Content-Type": "application/xml"},
+    )
+    assert response.status_code == 200
+    assert "<Encrypt>" in response.text
