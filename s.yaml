@@ -30,15 +30,17 @@ resources:
         PORT: "9000"
         H5_STATIC_DIR: /code/static
         PATH: /var/fc/lang/python3.12/bin:/usr/local/bin:/usr/bin:/bin
-        PYTHONPATH: /code
-        DASHSCOPE_API_KEY: ${env("DASHSCOPE_API_KEY", "")}
+        PYTHONPATH: /code:/code/python
+        DASHSCOPE_API_KEY: ${env("DASHSCOPE_API_KEY")}
         DASHSCOPE_BASE_URL: https://dashscope.aliyuncs.com/compatible-mode/v1
         DASHSCOPE_MODEL: ${env("DASHSCOPE_MODEL", "glm-5")}
         DASHSCOPE_TIMEOUT_SECONDS: ${env("DASHSCOPE_TIMEOUT_SECONDS", "60")}
-        WEWORK_CORP_ID: ${env("WEWORK_CORP_ID", "")}
-        WEWORK_AGENT_ID: ${env("WEWORK_AGENT_ID", "")}
-        WEWORK_AGENT_SECRET: ${env("WEWORK_AGENT_SECRET", "")}
+        WEWORK_CORP_ID: ${env("WEWORK_CORP_ID")}
+        WEWORK_AGENT_ID: ${env("WEWORK_AGENT_ID")}
+        WEWORK_AGENT_SECRET: ${env("WEWORK_AGENT_SECRET")}
         WEWORK_TOKEN: 69Ku5OIg
         WEWORK_ENCODING_AES_KEY: abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG
         WEWORK_DB_PATH: /tmp/wework/paiche.db
         BASE_PATH: /paiche
+        LOG_LEVEL: INFO
+      logConfig: auto

@@ -13,7 +13,15 @@ if [ "$(uname -s)" = "Linux" ]; then
   exit 0
 fi
 
-echo "非 Linux 环境，使用 Docker 构建 manylinux wheel..."
+echo "非 Linux 环境，优先用 pip download 拉取 manylinux wheel..."
+python3 -m pip install --upgrade pip
+if python3 -m pip download -r agent/requirements.txt -d agent/wheelhouse \
+  --platform manylinux2014_x86_64 --python-version 3.12 --only-binary=:all:; then
+  echo "wheelhouse ready (pip download): agent/wheelhouse"
+  exit 0
+fi
+
+echo "pip download 失败，尝试 Docker 构建 manylinux wheel..."
 docker pull quay.io/pypa/manylinux_2_28_x86_64
 
 for attempt in 1 2 3; do

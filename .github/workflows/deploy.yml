@@ -38,15 +38,23 @@ jobs:
         working-directory: agent
         env:
           LUCHE_SKIP_ENV_LOCAL: "1"
+          LUCHE_SKIP_WHEELHOUSE: "1"
         run: python3 -m pytest tests -q
 
       - name: Build Agent Python wheelhouse
-        run: |
-          set -euo pipefail
-          rm -rf agent/wheelhouse
-          mkdir -p agent/wheelhouse
-          python3 -m pip install --upgrade pip
-          python3 -m pip wheel --wheel-dir agent/wheelhouse -r agent/requirements.txt
+        run: bash scripts/build_wheelhouse.sh
+
+      - name: Verify wheelhouse offline install
+        run: bash scripts/check_wheelhouse.sh
+
+      - name: Build Agent Python vendor
+        run: bash scripts/build_python_vendor.sh
+
+      - name: Verify Python vendor imports
+        run: bash scripts/check_python_vendor.sh
+
+      - name: Wheelhouse pytest gate
+        run: python3 -m pytest agent/tests/test_wheelhouse.py -q
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -82,6 +90,13 @@ jobs:
       - name: Install Serverless Devs
         run: npm install -g @serverless-devs/s
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: agent/requirements.txt
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -91,12 +106,16 @@ jobs:
         run: node frontend/build.mjs
 
       - name: Build Agent Python wheelhouse
-        run: |
-          set -euo pipefail
-          rm -rf agent/wheelhouse
-          mkdir -p agent/wheelhouse
-          python3 -m pip install --upgrade pip
-          python3 -m pip wheel --wheel-dir agent/wheelhouse -r agent/requirements.txt
+        run: bash scripts/build_wheelhouse.sh
+
+      - name: Verify wheelhouse offline install
+        run: bash scripts/check_wheelhouse.sh
+
+      - name: Build Agent Python vendor
+        run: bash scripts/build_python_vendor.sh
+
+      - name: Verify Python vendor imports
+        run: bash scripts/check_python_vendor.sh
 
       - name: Configure Aliyun credentials
         run: |
