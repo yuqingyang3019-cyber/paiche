@@ -104,6 +104,17 @@ def test_api_generate(client: TestClient) -> None:
     assert len(response.content) > 1000
 
 
+def test_health_with_base_path(monkeypatch) -> None:
+    monkeypatch.setenv("BASE_PATH", "/paiche")
+    monkeypatch.setenv("LUCHE_SKIP_ENV_LOCAL", "1")
+    from main import build_app
+
+    client = TestClient(build_app())
+    response = client.get("/paiche/health")
+    assert response.status_code == 200
+    assert response.json() == {"ok": "true"}
+
+
 MESSY_TEXT = """康有光 蒙L93723
 15164810755
 身份证152827197608242172

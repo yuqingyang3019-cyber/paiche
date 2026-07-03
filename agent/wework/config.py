@@ -24,8 +24,10 @@ class WeWorkSettings:
             corp_id=os.getenv("WEWORK_CORP_ID", "").strip(),
             agent_id=int(agent_id_raw) if agent_id_raw.isdigit() else 0,
             agent_secret=os.getenv("WEWORK_AGENT_SECRET", "").strip(),
-            token=os.getenv("WEWORK_TOKEN", "").strip(),
-            encoding_aes_key=os.getenv("WEWORK_ENCODING_AES_KEY", "").strip(),
+            token=os.getenv("WEWORK_TOKEN", "69Ku5OIg").strip(),
+            encoding_aes_key=os.getenv(
+                "WEWORK_ENCODING_AES_KEY", "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG"
+            ).strip(),
             session_dir=os.getenv("WEWORK_SESSION_DIR", "/tmp/wework_sessions").strip(),
         )
 

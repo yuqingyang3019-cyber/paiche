@@ -21,9 +21,9 @@ resources:
           - bootstrap.sh
         port: 9000
       cpu: 0.5
-      memorySize: 512
+      memorySize: 1024
       diskSize: 512
-      timeout: 60
+      timeout: 300
       instanceConcurrency: 10
       internetAccess: true
       environmentVariables:
@@ -38,12 +38,7 @@ resources:
         WEWORK_CORP_ID: ${env("WEWORK_CORP_ID", "")}
         WEWORK_AGENT_ID: ${env("WEWORK_AGENT_ID", "")}
         WEWORK_AGENT_SECRET: ${env("WEWORK_AGENT_SECRET", "")}
-        WEWORK_TOKEN: ${env("WEWORK_TOKEN", "")}
-        WEWORK_ENCODING_AES_KEY: ${env("WEWORK_ENCODING_AES_KEY", "")}
+        WEWORK_TOKEN: 69Ku5OIg
+        WEWORK_ENCODING_AES_KEY: abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG
         WEWORK_SESSION_DIR: /tmp/wework_sessions
-      customDomain:
-        protocol: HTTPS
-        route:
-          path: "/*"
-          qualifier: LATEST
-        domainName: auto
+        BASE_PATH: /paiche

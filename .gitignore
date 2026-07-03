@@ -6,3 +6,16 @@ agent/**/__pycache__/
 frontend/dist/
 frontend/node_modules/
 .env.local
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# FC 部署用 wheelhouse（CI 构建，不入库）
+agent/wheelhouse/
+
+# 根目录样例 Excel（程序只用 agent/template/ 空白模板）
+/乌达君正*.xlsx
+/*.xlsx
+!agent/template/
+

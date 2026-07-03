@@ -12,8 +12,17 @@ function errorMessage(payload, fallback) {
   return fallback;
 }
 
+function apiBase() {
+  const marker = "/paiche";
+  const { pathname } = window.location;
+  if (pathname === marker || pathname.startsWith(`${marker}/`)) {
+    return marker;
+  }
+  return "";
+}
+
 export async function parseDispatchText(text) {
-  const response = await fetch("/api/dispatch/parse", {
+  const response = await fetch(`${apiBase()}/api/dispatch/parse`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
@@ -26,7 +35,7 @@ export async function parseDispatchText(text) {
 }
 
 export async function generateDispatch(vehicles) {
-  const response = await fetch("/api/dispatch/generate", {
+  const response = await fetch(`${apiBase()}/api/dispatch/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ vehicles }),

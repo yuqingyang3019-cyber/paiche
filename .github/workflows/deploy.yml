@@ -1,0 +1,132 @@
+name: Deploy to FC
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "20"
+  PYTHON_VERSION: "3.12"
+  APP_URL: https://agent.water-healer.com/paiche
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            agent/requirements.txt
+            agent/requirements-dev.txt
+
+      - name: Install Python dependencies
+        run: python3 -m pip install -r agent/requirements-dev.txt
+
+      - name: Python syntax check
+        run: python3 -m compileall agent
+
+      - name: Run tests
+        env:
+          LUCHE_SKIP_ENV_LOCAL: "1"
+        run: python3 -m pytest agent/tests
+
+      - name: Build Agent Python wheelhouse
+        run: bash scripts/build_wheelhouse.sh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build H5 frontend
+        run: node frontend/build.mjs
+
+      - name: Node syntax check
+        run: node --check agent/static/app.js
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      ALIYUN_ACCOUNT_ID: ${{ secrets.ALIYUN_ACCOUNT_ID }}
+      ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+      ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+      DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+      DASHSCOPE_MODEL: ${{ secrets.DASHSCOPE_MODEL }}
+      WEWORK_CORP_ID: ${{ secrets.WEWORK_CORP_ID }}
+      WEWORK_AGENT_ID: ${{ secrets.WEWORK_AGENT_ID }}
+      WEWORK_AGENT_SECRET: ${{ secrets.WEWORK_AGENT_SECRET }}
+    concurrency:
+      group: fc-deploy-paiche
+      cancel-in-progress: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Serverless Devs
+        run: npm install -g @serverless-devs/s
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build H5 frontend
+        run: node frontend/build.mjs
+
+      - name: Build Agent Python wheelhouse
+        run: bash scripts/build_wheelhouse.sh
+
+      - name: Configure Aliyun credentials
+        run: |
+          s config add \
+            -a default \
+            --AccountID ${{ secrets.ALIYUN_ACCOUNT_ID }} \
+            --AccessKeyID ${{ secrets.ALIYUN_ACCESS_KEY_ID }} \
+            --AccessKeySecret ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }} \
+            -f
+
+      - name: Verify required secrets for deploy
+        run: |
+          set -euo pipefail
+          missing=""
+          for var in ALIYUN_ACCOUNT_ID ALIYUN_ACCESS_KEY_ID ALIYUN_ACCESS_KEY_SECRET DASHSCOPE_API_KEY; do
+            val="$(printenv "$var" || true)"
+            if [ -z "$val" ]; then
+              missing="$missing $var"
+            fi
+          done
+          if [ -n "${missing# }" ]; then
+            echo "::error::缺少或未配置的环境变量（GitHub Secrets）：${missing# }"
+            exit 1
+          fi
+
+      - name: Deploy to FC
+        run: s deploy -t s.yaml --assume-yes
+
+      - name: H5 page check
+        run: |
+          PAGE="$(curl --fail-with-body --connect-timeout 10 --max-time 120 "${{ env.APP_URL }}/")"
+          echo "$PAGE" | grep "乌达派车填表"
+
+      - name: FC health check
+        run: |
+          sleep 20
+          curl --fail-with-body --connect-timeout 10 --max-time 120 --retry 3 --retry-delay 15 --retry-all-errors "${{ env.APP_URL }}/health"
+
+      - name: Dump FC logs on failure
+        if: failure()
+        run: |
+          s info -t s.yaml || true
+          s logs -t s.yaml --type fail || true
+          s logs -t s.yaml --tail 100 || true

@@ -15,7 +15,7 @@ node frontend/build.mjs
 cd agent && python3 -m uvicorn main:app --reload --port 9000
 ```
 
-浏览器打开：http://127.0.0.1:9000
+浏览器打开：http://127.0.0.1:9000（本地无路径前缀；线上为 `/paiche`）
 
 使用方式：粘贴一条或多条车信息 →「添加到列表」→ 可多次添加 → 凑齐后点「生成今日 Excel」。一次粘贴多条时，每条需以「车号：」开头。
 
@@ -32,18 +32,31 @@ DASHSCOPE_MODEL=glm-5
 WEWORK_CORP_ID=企业ID
 WEWORK_AGENT_ID=应用AgentId
 WEWORK_AGENT_SECRET=应用Secret
-WEWORK_TOKEN=回调Token（自定）
-WEWORK_ENCODING_AES_KEY=回调EncodingAESKey（企微后台生成）
 ```
 
+`WEWORK_TOKEN` 与 `WEWORK_ENCODING_AES_KEY` 已写死在项目中，企微后台「接收消息」填下面两个固定值即可：
+
+| 配置项 | 固定值 |
+|---|---|
+| Token | `69Ku5OIg` |
+| EncodingAESKey | `abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG` |
+
 若使用业务空间专属域名，把 `DASHSCOPE_BASE_URL` 换成百炼控制台里显示的地址即可。
+
+## 线上地址
+
+- H5：`https://agent.water-healer.com/paiche/`
+- 企微回调：`https://agent.water-healer.com/paiche/api/wework/callback`
+
+自定义域名路由 `/paiche/*` 在阿里云 FC 控制台配置，与 `s.yaml` 中的 `BASE_PATH=/paiche` 对应。
 
 ## 企业微信使用（推荐）
 
 1. 注册 [企业微信](https://work.weixin.qq.com/) 并创建自建应用「乌达派车助手」
-2. 部署 FC 后，在应用「接收消息」填写：
-   - URL：`https://你的FC地址/api/wework/callback`
-   - Token / EncodingAESKey：与 `.env.local` 一致
+2. 在应用「接收消息」填写：
+   - URL：`https://agent.water-healer.com/paiche/api/wework/callback`
+   - Token：`69Ku5OIg`
+   - EncodingAESKey：`abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG`
 3. 手机安装企业微信，将个人微信里的车信息**逐条转发**到该应用
 4. 在应用里发送「列表」查看今日车辆，发送「生成」获取 Excel 文件
 
@@ -68,8 +81,16 @@ cd agent && python3 -m pytest tests -q
 ## 部署 FC
 
 ```bash
+# 1. 构建 wheelhouse（与 wole 相同，离线安装依赖，加速冷启动）
+bash scripts/build_wheelhouse.sh
+
+# 2. 构建前端并部署
 node frontend/build.mjs
 s deploy -t s.yaml --assume-yes
 ```
 
-部署后把控制台给出的 **HTTPS** 地址填到企业微信回调 URL。
+也可 push 到 `main` 分支，由 GitHub Actions 自动构建 wheelhouse 并部署。
+
+**冷启动原理**：CI 用 Docker 把 Python 依赖打成 Linux wheel 包（`agent/wheelhouse/`），随函数代码上传；FC 启动时 `bootstrap.sh` 从本地 wheelhouse 安装，不走公网 pip，通常几秒内完成。
+
+域名 `agent.water-healer.com` 的路由在 FC 控制台维护；`s deploy` 只更新函数代码与环境变量。
