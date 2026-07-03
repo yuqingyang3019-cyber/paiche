@@ -28,9 +28,22 @@ def _extract_block(block: str) -> dict[str, Any]:
 
 def parse_dispatch_text(text: str) -> dict[str, Any]:
     if os.getenv("DASHSCOPE_API_KEY", "").strip() or os.getenv("LLM_API_KEY", "").strip():
-        from .llm_parse import parse_dispatch_text_with_llm
+        try:
+            from .llm_parse import parse_dispatch_text_with_llm
 
-        return parse_dispatch_text_with_llm(text)
+            return parse_dispatch_text_with_llm(text)
+        except Exception as exc:
+            result = _parse_dispatch_text_regex(text)
+            if result["vehicles"]:
+                return result
+            err = str(exc)
+            if "invalid_api_key" in err or "401" in err:
+                hint = "大模型 API Key 无效，请联系管理员更新 DASHSCOPE_API_KEY"
+            else:
+                hint = f"大模型识别失败：{exc}"
+            warnings = list(result.get("warnings") or [])
+            warnings.insert(0, hint)
+            return {"vehicles": [], "warnings": warnings}
     return _parse_dispatch_text_regex(text)
 
 

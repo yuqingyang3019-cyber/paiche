@@ -141,3 +141,18 @@ def test_llm_parse_messy_text(mock_client_factory: MagicMock) -> None:
     assert result["vehicles"] == [SAMPLE_VEHICLE]
     assert result["warnings"] == []
 
+
+@patch("dispatch.llm_parse._client")
+def test_llm_invalid_key_falls_back_to_regex(mock_client_factory: MagicMock) -> None:
+    mock_client_factory.return_value.chat.completions.create.side_effect = RuntimeError(
+        "Error code: 401 - {'error': {'code': 'invalid_api_key'}}"
+    )
+
+    with patch.dict("os.environ", {"DASHSCOPE_API_KEY": "bad-key"}, clear=False):
+        from dispatch.parse import parse_dispatch_text
+
+        result = parse_dispatch_text(SAMPLE_TEXT)
+
+    assert result["vehicles"] == [SAMPLE_VEHICLE]
+    assert result["warnings"] == []
+
