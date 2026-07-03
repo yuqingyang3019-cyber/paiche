@@ -151,6 +151,21 @@ def test_handle_vehicle_llm_notifies(mock_parse, session_dir, mock_client) -> No
     assert "已添加" in mock_client.send_text.call_args_list[-1].args[1]
 
 
+@patch("wework.handler.parse_dispatch_text")
+def test_handle_vehicle_llm_falls_back_when_active_reply_fails(mock_parse, session_dir, mock_client) -> None:
+    mock_parse.return_value = {"vehicles": [SAMPLE_VEHICLE], "warnings": []}
+    mock_client.send_text.side_effect = RuntimeError("not allow to access from your ip")
+
+    with patch.dict("os.environ", {"DASHSCOPE_API_KEY": "test-key"}, clear=False):
+        xml = SAMPLE_XML.format(content=SAMPLE_TEXT)
+        reply, active = handle_incoming_xml(xml, mock_client)
+
+    assert active is False
+    assert reply
+    assert "已添加" in reply
+    assert len(load_vehicles("zhangsan")) == 1
+
+
 def test_wework_callback_disabled(client) -> None:
     with patch.dict("os.environ", {"LUCHE_SKIP_ENV_LOCAL": "1"}, clear=False):
         response = client.get(

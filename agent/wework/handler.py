@@ -106,13 +106,14 @@ def handle_incoming_xml(xml: str, client: WeWorkClient) -> tuple[str | None, boo
     return _handle_vehicle_text(userid, content, client)
 
 
-def _send_active_text(client: WeWorkClient, userid: str, content: str) -> None:
+def _send_active_text(client: WeWorkClient, userid: str, content: str) -> bool:
     try:
         client.send_text(userid, content)
         logger.info("wework active reply user=%s chars=%d", userid, len(content))
+        return True
     except Exception:
         logger.exception("wework active reply failed user=%s", userid)
-        raise
+        return False
 
 
 def _handle_vehicle_text(userid: str, content: str, client: WeWorkClient) -> tuple[str | None, bool]:
@@ -129,8 +130,9 @@ def _handle_vehicle_text(userid: str, content: str, client: WeWorkClient) -> tup
         logger.exception("wework parse failed user=%s", userid)
         reply = operation_guide(userid, f"识别失败：{exc}")
         if via_llm:
-            _send_active_text(client, userid, reply)
-            return None, True
+            if _send_active_text(client, userid, reply):
+                return None, True
+            return reply, False
         return reply, False
 
     vehicles: list[dict[str, Any]] = result.get("vehicles") or []
@@ -141,8 +143,9 @@ def _handle_vehicle_text(userid: str, content: str, client: WeWorkClient) -> tup
         reply = operation_guide(userid, note)
         logger.info("wework parse empty user=%s warnings=%s", userid, warnings)
         if via_llm:
-            _send_active_text(client, userid, reply)
-            return None, True
+            if _send_active_text(client, userid, reply):
+                return None, True
+            return reply, False
         return reply, False
 
     all_vehicles = append_vehicles(userid, vehicles)
@@ -156,8 +159,9 @@ def _handle_vehicle_text(userid: str, content: str, client: WeWorkClient) -> tup
     logger.info("wework parse ok user=%s added=%d total=%d", userid, len(vehicles), len(all_vehicles))
 
     if via_llm:
-        _send_active_text(client, userid, reply)
-        return None, True
+        if _send_active_text(client, userid, reply):
+            return None, True
+        return reply, False
     return reply, False
 
 
@@ -175,5 +179,6 @@ def _handle_generate(userid: str, client: WeWorkClient) -> tuple[str | None, boo
         logger.exception("wework generate failed user=%s", userid)
         return operation_guide(userid, f"生成失败：{exc}"), False
 
-    _send_active_text(client, userid, f"已生成 {filename}，请在聊天中查收文件。")
-    return None, True
+    if _send_active_text(client, userid, f"已生成 {filename}，请在聊天中查收文件。"):
+        return None, True
+    return f"已生成 {filename}，但发送确认消息失败。请检查聊天中的文件。", False
