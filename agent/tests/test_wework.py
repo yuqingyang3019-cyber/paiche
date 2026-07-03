@@ -9,6 +9,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
+from wework.callback import build_crypto, decrypt_message
+from wework.config import WeWorkSettings
 from wework.handler import handle_incoming_xml
 from wework.session import append_vehicles, clear_vehicles, format_vehicle_summary, load_vehicles
 
@@ -83,6 +85,12 @@ def test_handle_vehicle_text(session_dir, mock_client) -> None:
     assert len(load_vehicles("zhangsan")) == 1
 
 
+def test_handle_help_command(session_dir, mock_client) -> None:
+    xml = SAMPLE_XML.format(content="帮助")
+    reply, _ = handle_incoming_xml(xml, mock_client)
+    assert "转发" in reply
+
+
 def test_handle_list_command(session_dir, mock_client) -> None:
     append_vehicles("zhangsan", [SAMPLE_VEHICLE])
     xml = SAMPLE_XML.format(content="列表")
@@ -123,3 +131,26 @@ def test_wework_callback_disabled(client) -> None:
             },
         )
     assert response.status_code == 503
+
+
+def test_decrypt_post_body_roundtrip() -> None:
+    from wechatpy.crypto import _get_signature
+
+    settings = WeWorkSettings(
+        corp_id="wwtestcorp",
+        agent_id=1,
+        agent_secret="secret",
+        token="69Ku5OIg",
+        encoding_aes_key="abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG",
+        session_dir="/tmp/wework-test",
+    )
+    crypto = build_crypto(settings)
+    inner_xml = SAMPLE_XML.format(content="列表")
+    nonce = "nonce123"
+    timestamp = "1234567890"
+    encrypted_xml = crypto.encrypt_message(inner_xml, nonce, timestamp)
+    encrypt_text = encrypted_xml.split("<Encrypt><![CDATA[")[1].split("]]></Encrypt>")[0]
+    signature = _get_signature(settings.token, timestamp, nonce, encrypt_text)
+
+    decrypted = decrypt_message(crypto, signature, timestamp, nonce, encrypted_xml.encode("utf-8"))
+    assert "列表" in decrypted

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-import xml.etree.ElementTree as ET
 
 from wechatpy.enterprise.crypto import WeChatCrypto
 from wechatpy.exceptions import InvalidSignatureException
@@ -27,12 +26,9 @@ def decrypt_message(
     nonce: str,
     body: bytes,
 ) -> str:
-    root = ET.fromstring(body.decode("utf-8"))
-    encrypt_node = root.find("Encrypt")
-    if encrypt_node is None or not encrypt_node.text:
-        raise ValueError("缺少 Encrypt 字段")
+    # wechatpy 需要完整的 <xml><Encrypt>...</Encrypt></xml> 报文，不能只传密文字符串
     try:
-        return crypto.decrypt_message(encrypt_node.text, msg_signature, timestamp, nonce)
+        return crypto.decrypt_message(body.decode("utf-8"), msg_signature, timestamp, nonce)
     except InvalidSignatureException as exc:
         raise ValueError("消息签名校验失败") from exc
 
