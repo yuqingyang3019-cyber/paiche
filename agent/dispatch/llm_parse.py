@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from typing import Any
 
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """你是派车信息提取助手。从微信聊天文本中提取车辆信息。
 规则：
@@ -49,6 +52,7 @@ def parse_dispatch_text_with_llm(text: str) -> dict[str, Any]:
 
     model = (os.getenv("DASHSCOPE_MODEL") or os.getenv("LLM_MODEL") or "glm-5").strip()
     timeout = float(os.getenv("DASHSCOPE_TIMEOUT_SECONDS") or os.getenv("LLM_TIMEOUT_SECONDS") or "60")
+    logger.info("llm request model=%s chars=%d timeout=%s", model, len(normalized), timeout)
     response = _client().chat.completions.create(
         model=model,
         temperature=0,
@@ -79,4 +83,5 @@ def parse_dispatch_text_with_llm(text: str) -> dict[str, Any]:
 
     if not vehicles and not warnings:
         warnings.append("未识别到完整车信息")
+    logger.info("llm done vehicles=%d warnings=%d", len(vehicles), len(warnings))
     return {"vehicles": vehicles, "warnings": warnings}

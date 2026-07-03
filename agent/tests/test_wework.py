@@ -46,6 +46,7 @@ def client() -> TestClient:
 def mock_client():
     client = MagicMock()
     client.send_file = MagicMock()
+    client.send_text = MagicMock()
     return client
 
 
@@ -129,10 +130,25 @@ def test_handle_generate(mock_fill, session_dir, mock_client) -> None:
 
     xml = SAMPLE_XML.format(content="生成")
     reply, active = handle_incoming_xml(xml, mock_client)
+    assert active is True
+    assert reply is None
+    assert "乌达君正7.3.xlsx" in str(mock_client.send_text.call_args_list[-1])
+    mock_client.send_file.assert_called_once()
+    assert mock_client.send_text.call_count >= 2
+
+
+@patch("wework.handler.parse_dispatch_text")
+def test_handle_vehicle_llm_notifies(mock_parse, session_dir, mock_client) -> None:
+    mock_parse.return_value = {"vehicles": [SAMPLE_VEHICLE], "warnings": []}
+
+    with patch.dict("os.environ", {"DASHSCOPE_API_KEY": "test-key"}, clear=False):
+        xml = SAMPLE_XML.format(content=SAMPLE_TEXT)
+        reply, active = handle_incoming_xml(xml, mock_client)
 
     assert active is True
-    assert "乌达君正7.3.xlsx" in reply
-    mock_client.send_file.assert_called_once()
+    assert reply is None
+    assert mock_client.send_text.call_args_list[0].args[1] == "正在用大模型识别车信息，约 10–20 秒，请稍候…"
+    assert "已添加" in mock_client.send_text.call_args_list[-1].args[1]
 
 
 def test_wework_callback_disabled(client) -> None:

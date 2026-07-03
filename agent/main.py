@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, Response
 
 from dispatch.fill import fill_dispatch_workbook
 from dispatch.parse import parse_dispatch_text
+from logging_config import setup_logging
 from wework.routes import router as wework_router
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -45,6 +46,7 @@ def create_api() -> FastAPI:
 
     @api.on_event("startup")
     def on_startup() -> None:
+        setup_logging()
         load_env_local()
 
     @api.get("/health")

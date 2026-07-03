@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 PATTERNS = {
     "plate": re.compile(r"车号[：:]\s*(\S+)"),
@@ -12,6 +15,10 @@ PATTERNS = {
 }
 
 REQUIRED_FIELDS = ("plate", "name", "phone", "idCard")
+
+
+def uses_llm_parse() -> bool:
+    return bool(os.getenv("DASHSCOPE_API_KEY", "").strip() or os.getenv("LLM_API_KEY", "").strip())
 
 
 def _extract_block(block: str) -> dict[str, Any]:
@@ -27,14 +34,17 @@ def _extract_block(block: str) -> dict[str, Any]:
 
 
 def parse_dispatch_text(text: str) -> dict[str, Any]:
-    if os.getenv("DASHSCOPE_API_KEY", "").strip() or os.getenv("LLM_API_KEY", "").strip():
+    if uses_llm_parse():
         try:
             from .llm_parse import parse_dispatch_text_with_llm
 
+            logger.info("dispatch parse via llm chars=%d", len(text or ""))
             return parse_dispatch_text_with_llm(text)
         except Exception as exc:
+            logger.warning("dispatch llm failed, fallback regex: %s", exc)
             result = _parse_dispatch_text_regex(text)
             if result["vehicles"]:
+                logger.info("dispatch regex fallback ok vehicles=%d", len(result["vehicles"]))
                 return result
             err = str(exc)
             if "invalid_api_key" in err or "401" in err:
@@ -44,6 +54,7 @@ def parse_dispatch_text(text: str) -> dict[str, Any]:
             warnings = list(result.get("warnings") or [])
             warnings.insert(0, hint)
             return {"vehicles": [], "warnings": warnings}
+    logger.info("dispatch parse via regex chars=%d", len(text or ""))
     return _parse_dispatch_text_regex(text)
 
 

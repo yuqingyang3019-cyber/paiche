@@ -54,8 +54,16 @@ async def wework_callback(
 
     try:
         xml = decrypt_message(crypto, msg_signature, timestamp, nonce, body)
+        userid = _extract_xml_field(xml, "FromUserName") or "unknown"
+        logger.info("wework callback decrypted user=%s bytes=%d", userid, len(body))
         client = WeWorkClient(settings)
-        reply_text, _ = handle_incoming_xml(xml, client)
+        reply_text, delivered_via_api = handle_incoming_xml(xml, client)
+        logger.info(
+            "wework callback done user=%s passive=%s via_api=%s",
+            userid,
+            bool(reply_text),
+            delivered_via_api,
+        )
     except ValueError as exc:
         logger.warning("wework callback rejected: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -64,7 +72,7 @@ async def wework_callback(
         # 企微要求尽快 200，避免反复重试打爆实例
         return PlainTextResponse("success")
 
-    if not reply_text:
+    if delivered_via_api or not reply_text:
         return PlainTextResponse("success")
 
     try:
