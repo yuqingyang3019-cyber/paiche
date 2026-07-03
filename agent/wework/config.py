@@ -14,8 +14,12 @@ class WeWorkSettings:
     session_dir: str
 
     @property
+    def callback_enabled(self) -> bool:
+        return bool(self.corp_id and self.token and self.encoding_aes_key)
+
+    @property
     def enabled(self) -> bool:
-        return bool(self.corp_id and self.agent_secret and self.token and self.encoding_aes_key)
+        return bool(self.callback_enabled and self.agent_secret)
 
     @classmethod
     def from_env(cls) -> WeWorkSettings:

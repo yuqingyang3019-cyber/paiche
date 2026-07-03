@@ -40,7 +40,12 @@ jobs:
         run: python3 -m pytest agent/tests
 
       - name: Build Agent Python wheelhouse
-        run: bash scripts/build_wheelhouse.sh
+        run: |
+          set -euo pipefail
+          rm -rf agent/wheelhouse
+          mkdir -p agent/wheelhouse
+          python3 -m pip install --upgrade pip
+          python3 -m pip wheel --wheel-dir agent/wheelhouse -r agent/requirements.txt
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -85,7 +90,12 @@ jobs:
         run: node frontend/build.mjs
 
       - name: Build Agent Python wheelhouse
-        run: bash scripts/build_wheelhouse.sh
+        run: |
+          set -euo pipefail
+          rm -rf agent/wheelhouse
+          mkdir -p agent/wheelhouse
+          python3 -m pip install --upgrade pip
+          python3 -m pip wheel --wheel-dir agent/wheelhouse -r agent/requirements.txt
 
       - name: Configure Aliyun credentials
         run: |

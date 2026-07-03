@@ -13,8 +13,11 @@ router = APIRouter(prefix="/api/wework", tags=["wework"])
 
 def _require_settings():
     settings = get_settings()
-    if not settings.enabled:
-        raise HTTPException(status_code=503, detail="企业微信未配置，请设置 WEWORK_* 环境变量")
+    if not settings.callback_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="企业微信回调未配置，请设置 WEWORK_CORP_ID（及 Token / EncodingAESKey）",
+        )
     return settings
 
 
