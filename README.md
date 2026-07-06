@@ -94,3 +94,43 @@ s deploy -t s.yaml --assume-yes
 **冷启动原理**：CI 用 Docker 把 Python 依赖打成 Linux wheel 包（`agent/wheelhouse/`），随函数代码上传；FC 启动时 `bootstrap.sh` 从本地 wheelhouse 安装，不走公网 pip，通常几秒内完成。
 
 域名 `agent.water-healer.com` 的路由在 FC 控制台维护；`s deploy` 只更新函数代码与环境变量。
+
+## 部署 uniCloud 支付宝云
+
+uniCloud 版本位于 [`uniCloud-alipay`](uniCloud-alipay)，后端已迁为 URL 化云函数 `paiche-api`，前端发布目录为 [`dist/h5`](dist/h5)。
+
+首次发布需要你先在 HBuilderX 中完成：
+
+1. 登录 DCloud 账号。
+2. 打开本项目，并关联支付宝云服务空间。
+3. 在 uniCloud 控制台为 `paiche-api` 配置环境变量：
+   - `DASHSCOPE_API_KEY`
+   - `DASHSCOPE_BASE_URL`
+   - `DASHSCOPE_MODEL`
+   - `WEWORK_CORP_ID`
+   - `WEWORK_AGENT_ID`
+   - `WEWORK_AGENT_SECRET`
+   - `WEWORK_TOKEN`
+   - `WEWORK_ENCODING_AES_KEY`
+4. 为 `paiche-api` 开启 URL 化，拿到云函数基础地址。
+   - 云函数：`paiche-api`
+   - 建议 URL 化路径：`/paiche-api`
+   - 开启后先访问 `云函数基础地址/health`，应返回 `{"ok":"true"}`。
+
+本地 CLI 发布：
+
+```bash
+UNICLOUD_PROJECT=luche \
+UNICLOUD_PROVIDER=alipay \
+UNICLOUD_SPACE=你的支付宝云服务空间ID或名称 \
+PAICHE_API_BASE=https://你的云函数URL化地址 \
+bash scripts/deploy_unicloud.sh
+```
+
+发布完成后，把企业微信「接收消息」URL 改为：
+
+```text
+https://ai.water-healer.com/paiche-api/api/wework/callback
+```
+
+如果 `cli` 命令不存在，需要把 HBuilderX 的 CLI 工具目录加入 `PATH`，或直接在 HBuilderX 内使用右键上传云函数、数据库 schema 和前端网页托管。

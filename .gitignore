@@ -1,10 +1,14 @@
 agent/static/
+dist/
+luche/
 agent/__pycache__/
 agent/**/__pycache__/
 .pytest_cache/
 .venv/
 frontend/dist/
 frontend/node_modules/
+uniCloud-alipay/cloudfunctions/*/node_modules/
+**/uniCloud-alipay/cloudfunctions/*/node_modules/
 .env.local
 
 # SQLite（FC 运行时生成，不入库）

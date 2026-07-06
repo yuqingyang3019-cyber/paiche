@@ -1,6 +1,5 @@
 (function () {
-  const STORAGE_KEY = "luche-vehicles";
-  const STORAGE_DATE_KEY = "luche-date";
+  const CLIENT_ID_KEY = "luche-client-id";
   const TABLE_COLUMNS = [
     { key: "factory", label: "提货工厂", required: false },
     { key: "plate", label: "车牌号", required: true },
@@ -15,17 +14,12 @@
 
   const state = {
     inputText: "",
-    vehicles: loadVehicles(),
+    vehicles: [],
     parsing: false,
     generating: false,
     toast: { type: "", text: "" },
     progress: { value: 0, label: "", timer: null },
   };
-
-  function todayKey() {
-    const now = new Date();
-    return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
-  }
 
   function todayLabel() {
     const now = new Date();
@@ -37,22 +31,16 @@
     return `乌达君正${now.getMonth() + 1}.${now.getDate()}.xlsx`;
   }
 
-  function loadVehicles() {
-    if (localStorage.getItem(STORAGE_DATE_KEY) !== todayKey()) {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.setItem(STORAGE_DATE_KEY, todayKey());
-      return [];
+  function clientId() {
+    let value = localStorage.getItem(CLIENT_ID_KEY);
+    if (!value) {
+      const random = window.crypto && window.crypto.getRandomValues
+        ? Array.from(window.crypto.getRandomValues(new Uint8Array(16))).map((item) => item.toString(16).padStart(2, "0")).join("")
+        : `${Date.now()}${Math.random().toString(16).slice(2)}`;
+      value = `web_${random}`;
+      localStorage.setItem(CLIENT_ID_KEY, value);
     }
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    } catch {
-      return [];
-    }
-  }
-
-  function saveVehicles() {
-    localStorage.setItem(STORAGE_DATE_KEY, todayKey());
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.vehicles));
+    return value;
   }
 
   function toTableRow(vehicle) {
@@ -70,6 +58,10 @@
   }
 
   function apiBase() {
+    const configured = window.__PAICHE_CONFIG__ && window.__PAICHE_CONFIG__.apiBase;
+    if (configured) {
+      return String(configured).replace(/\/$/, "");
+    }
     const marker = "/paiche";
     const pathname = window.location.pathname;
     if (pathname === marker || pathname.indexOf(`${marker}/`) === 0) {
@@ -95,7 +87,6 @@
   async function parseDispatchText(text) {
     const response = await fetch(`${apiBase()}/api/dispatch/parse`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     });
     const payload = await readJson(response);
@@ -105,10 +96,58 @@
     return payload;
   }
 
+  async function loadCloudVehicles() {
+    const response = await fetch(`${apiBase()}/api/dispatch/list`, {
+      method: "POST",
+      body: JSON.stringify({ clientId: clientId() }),
+    });
+    const payload = await readJson(response);
+    if (!response.ok) {
+      throw new Error(errorMessage(payload, "列表加载失败，请稍后重试"));
+    }
+    return payload.vehicles || [];
+  }
+
+  async function appendCloudVehicles(vehicles) {
+    const response = await fetch(`${apiBase()}/api/dispatch/append`, {
+      method: "POST",
+      body: JSON.stringify({ clientId: clientId(), vehicles }),
+    });
+    const payload = await readJson(response);
+    if (!response.ok) {
+      throw new Error(errorMessage(payload, "保存列表失败，请稍后重试"));
+    }
+    return payload;
+  }
+
+  async function removeCloudVehicle(vehicle) {
+    if (!vehicle || !vehicle.id) return state.vehicles;
+    const response = await fetch(`${apiBase()}/api/dispatch/remove`, {
+      method: "POST",
+      body: JSON.stringify({ clientId: clientId(), id: vehicle.id }),
+    });
+    const payload = await readJson(response);
+    if (!response.ok) {
+      throw new Error(errorMessage(payload, "删除失败，请稍后重试"));
+    }
+    return payload.vehicles || [];
+  }
+
+  async function clearCloudVehicles() {
+    const response = await fetch(`${apiBase()}/api/dispatch/clear`, {
+      method: "POST",
+      body: JSON.stringify({ clientId: clientId() }),
+    });
+    const payload = await readJson(response);
+    if (!response.ok) {
+      throw new Error(errorMessage(payload, "清空失败，请稍后重试"));
+    }
+    return payload.vehicles || [];
+  }
+
   async function generateDispatch(vehicles) {
     const response = await fetch(`${apiBase()}/api/dispatch/generate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ vehicles }),
     });
     if (!response.ok) {
@@ -279,21 +318,28 @@
     });
   }
 
-  function removeVehicle(index) {
-    state.vehicles.splice(index, 1);
+  async function removeVehicle(index) {
+    const vehicle = state.vehicles[index];
     clearToast();
-    saveVehicles();
-    render();
+    try {
+      state.vehicles = await removeCloudVehicle(vehicle);
+      render();
+    } catch (error) {
+      showToast("error", error.message || "删除失败");
+    }
   }
 
-  function clearAll() {
+  async function clearAll() {
     if (!state.vehicles.length || !window.confirm(`确定清空${todayLabel()}列表？`)) {
       return;
     }
-    state.vehicles = [];
     clearToast();
-    saveVehicles();
-    render();
+    try {
+      state.vehicles = await clearCloudVehicles();
+      render();
+    } catch (error) {
+      showToast("error", error.message || "清空失败");
+    }
   }
 
   async function addToList() {
@@ -316,28 +362,15 @@
         return;
       }
 
-      const plates = new Set(state.vehicles.map((item) => item.plate));
-      let added = 0;
-      const skipped = [];
-
-      incoming.forEach(function (vehicle) {
-        if (plates.has(vehicle.plate)) {
-          skipped.push(vehicle.plate);
-          return;
-        }
-        state.vehicles.push(vehicle);
-        plates.add(vehicle.plate);
-        added += 1;
-      });
-
+      const saved = await appendCloudVehicles(incoming);
+      state.vehicles = saved.vehicles || [];
       state.inputText = "";
-      saveVehicles();
 
       const notes = [];
-      if (added) notes.push(`已添加 ${added} 辆`);
-      if (skipped.length) notes.push(`重复跳过：${skipped.join("、")}`);
+      if (saved.added) notes.push(`已添加 ${saved.added} 辆`);
+      if (saved.skipped && saved.skipped.length) notes.push(`重复跳过：${saved.skipped.join("、")}`);
       if (payload.warnings && payload.warnings.length) notes.push(payload.warnings.join("；"));
-      showToast(added ? "success" : "warning", notes.join("；") || "未添加新车辆");
+      showToast(saved.added ? "success" : "warning", notes.join("；") || "未添加新车辆");
     } catch (error) {
       showToast("error", error.message || "解析失败");
     } finally {
@@ -380,4 +413,12 @@
   });
 
   render();
+  loadCloudVehicles()
+    .then(function (vehicles) {
+      state.vehicles = vehicles;
+      render();
+    })
+    .catch(function (error) {
+      showToast("error", error.message || "列表加载失败");
+    });
 })();

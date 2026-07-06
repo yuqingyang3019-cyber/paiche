@@ -1,0 +1,8 @@
+{
+  "name": "paiche-api",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  }
+}

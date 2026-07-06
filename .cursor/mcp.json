@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "uni-app-x": {
+      "command": "npx",
+      "args": ["-y", "uni-app-x-mcp"],
+      "env": {
+        "HTTP_PROXY": "http://127.0.0.1:7897",
+        "HTTPS_PROXY": "http://127.0.0.1:7897",
+        "npm_config_proxy": "http://127.0.0.1:7897",
+        "npm_config_https_proxy": "http://127.0.0.1:7897",
+        "npm_config_registry": "https://registry.npmjs.org"
+      }
+    }
+  }
+}
